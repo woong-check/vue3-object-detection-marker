@@ -15,43 +15,49 @@
         @touchmove.prevent="handleTouchMove"
         @touchend.prevent="handleTouchEnd"
       />
-      
+
       <!-- Loading indicator -->
       <div v-if="!imageLoaded && props.image" class="loading-indicator">
         이미지를 로딩 중...
       </div>
-      
+
       <!-- Error message -->
       <div v-if="errorMessage" class="error-message">
         {{ errorMessage }}
       </div>
     </div>
-    
-
-
-
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, withDefaults, defineProps, defineEmits, defineExpose } from 'vue';
-import type { 
-  Props, 
-  SelectionMode, 
-  GridCell, 
-  ColorLayer, 
-  LayerSelectionData, 
+import {
+  ref,
+  computed,
+  watch,
+  onMounted,
+  onUnmounted,
+  withDefaults,
+  defineProps,
+  defineEmits,
+  defineExpose,
+} from 'vue';
+import type {
+  Props,
+  SelectionMode,
+  GridCell,
+  ColorLayer,
+  LayerSelectionData,
   ExtendedSelectionData,
   ColorLayerExport,
   BrushShape,
   GridLayerExport,
-  Rectangle
+  Rectangle,
 } from '../types';
-import { 
-  calculateGridFromResolution, 
-  screenToGridResolution, 
+import {
+  calculateGridFromResolution,
+  screenToGridResolution,
   getGridKey,
-  mergeGridsToRects
+  mergeGridsToRects,
 } from '../utils';
 
 // --- Props and Emits ---
@@ -60,13 +66,20 @@ const props = withDefaults(defineProps<Props>(), {
   selectionMode: 'point',
   highlightColor: '#007bff',
   gridColor: '#cccccc',
-  layerColors: () => ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'],
+  layerColors: () => [
+    '#FF0000',
+    '#00FF00',
+    '#0000FF',
+    '#FFFF00',
+    '#FF00FF',
+    '#00FFFF',
+  ],
   canvasWidth: 800,
   canvasHeight: 600,
   hoverColor: '#6c757d',
   backgroundColor: '#ffffff',
   defaultBrushSize: 1,
-  defaultBrushShape: 'circle'
+  defaultBrushShape: 'circle',
 });
 
 const emit = defineEmits<{
@@ -127,8 +140,12 @@ const hexToRgba = (hex: string, alpha: number): string => {
 
 const getColorName = (color: string): string => {
   const colorNames: Record<string, string> = {
-    '#FF0000': '빨강', '#00FF00': '초록', '#0000FF': '파랑',
-    '#FFFF00': '노랑', '#FF00FF': '마젠타', '#00FFFF': '청록'
+    '#FF0000': '빨강',
+    '#00FF00': '초록',
+    '#0000FF': '파랑',
+    '#FFFF00': '노랑',
+    '#FF00FF': '마젠타',
+    '#00FFFF': '청록',
   };
   return colorNames[color.toUpperCase()] || color;
 };
@@ -143,7 +160,7 @@ const initColorLayers = () => {
       selectedGrids: new Set<string>(),
       visible: true,
       name: getColorName(color),
-      opacity: 0.5
+      opacity: 0.5,
     });
   });
   if (colors.length > 0) {
@@ -170,7 +187,13 @@ const redrawCanvas = () => {
   ctx.fillRect(0, 0, canvasWidth.value, canvasHeight.value);
 
   if (imageElement.value && imageLoaded.value) {
-    ctx.drawImage(imageElement.value, 0, 0, canvasWidth.value, canvasHeight.value);
+    ctx.drawImage(
+      imageElement.value,
+      0,
+      0,
+      canvasWidth.value,
+      canvasHeight.value
+    );
   }
 
   drawGrid(ctx);
@@ -183,12 +206,19 @@ const redrawCanvas = () => {
   }
 
   // Draw brush preview
-  if (hoveredCell.value && (currentMode.value === 'point' || currentMode.value === 'eraser')) {
+  if (
+    hoveredCell.value &&
+    (currentMode.value === 'point' || currentMode.value === 'eraser')
+  ) {
     drawBrushPreview(ctx);
   }
 
   // Draw rectangle selection preview (for rectangle mode)
-  if (currentMode.value === 'rectangle' && selectionStart.value && selectionEnd.value) {
+  if (
+    currentMode.value === 'rectangle' &&
+    selectionStart.value &&
+    selectionEnd.value
+  ) {
     drawRectanglePreview(ctx);
   }
 };
@@ -198,17 +228,23 @@ const drawGrid = (ctx: CanvasRenderingContext2D) => {
   ctx.strokeStyle = props.gridColor;
   ctx.lineWidth = 1;
   for (let x = 0; x <= canvasWidth.value; x += cellSize.value.width) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvasHeight.value); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvasHeight.value);
+    ctx.stroke();
   }
   for (let y = 0; y <= canvasHeight.value; y += cellSize.value.height) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvasWidth.value, y); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvasWidth.value, y);
+    ctx.stroke();
   }
 };
 
 const drawColorLayers = (ctx: CanvasRenderingContext2D) => {
   colorLayers.value.forEach((layer: ColorLayer) => {
     if (layer.visible) {
-              layer.selectedGrids.forEach((key: string) => {
+      layer.selectedGrids.forEach((key: string) => {
         const [row, col] = key.split(',').map(Number);
         drawCellHighlight(ctx, { row, col }, layer.color, layer.opacity);
       });
@@ -216,7 +252,12 @@ const drawColorLayers = (ctx: CanvasRenderingContext2D) => {
   });
 };
 
-const drawCellHighlight = (ctx: CanvasRenderingContext2D, cell: GridCell, color: string, fillOpacity: number = 0.5) => {
+const drawCellHighlight = (
+  ctx: CanvasRenderingContext2D,
+  cell: GridCell,
+  color: string,
+  fillOpacity: number = 0.5
+) => {
   if (!cellSize.value) return;
   const x = cell.col * cellSize.value.width;
   const y = cell.row * cellSize.value.height;
@@ -229,14 +270,22 @@ const drawCellHighlight = (ctx: CanvasRenderingContext2D, cell: GridCell, color:
 
 const drawRectanglePreview = (ctx: CanvasRenderingContext2D) => {
   if (!selectionStart.value || !selectionEnd.value || !cellSize.value) return;
-  const startX = Math.min(selectionStart.value.col, selectionEnd.value.col) * cellSize.value.width;
-  const startY = Math.min(selectionStart.value.row, selectionEnd.value.row) * cellSize.value.height;
-  const endX = (Math.max(selectionStart.value.col, selectionEnd.value.col) + 1) * cellSize.value.width;
-  const endY = (Math.max(selectionStart.value.row, selectionEnd.value.row) + 1) * cellSize.value.height;
-  
+  const startX =
+    Math.min(selectionStart.value.col, selectionEnd.value.col) *
+    cellSize.value.width;
+  const startY =
+    Math.min(selectionStart.value.row, selectionEnd.value.row) *
+    cellSize.value.height;
+  const endX =
+    (Math.max(selectionStart.value.col, selectionEnd.value.col) + 1) *
+    cellSize.value.width;
+  const endY =
+    (Math.max(selectionStart.value.row, selectionEnd.value.row) + 1) *
+    cellSize.value.height;
+
   const activeLayer = colorLayers.value.get(activeColorLayer.value);
   const previewColor = activeLayer ? activeLayer.color : props.highlightColor;
-  
+
   ctx.strokeStyle = previewColor;
   ctx.lineWidth = 2;
   ctx.setLineDash([5, 5]);
@@ -251,10 +300,10 @@ const drawBrushPreview = (ctx: CanvasRenderingContext2D) => {
   const { width, height } = cellSize.value;
   const centerX = col * width + width / 2;
   const centerY = row * height + height / 2;
-  
+
   const activeLayer = colorLayers.value.get(activeColorLayer.value);
   const previewColor = activeLayer ? activeLayer.color : props.highlightColor;
-  
+
   ctx.strokeStyle = previewColor;
   ctx.lineWidth = 2;
   ctx.setLineDash([3, 3]);
@@ -264,18 +313,19 @@ const drawBrushPreview = (ctx: CanvasRenderingContext2D) => {
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
     ctx.stroke();
-  } else { // Square
-    const size = (brushSize.value * 2 - 1);
+  } else {
+    // Square
+    const size = brushSize.value * 2 - 1;
     const previewWidth = size * width;
     const previewHeight = size * height;
     ctx.strokeRect(
-      centerX - previewWidth / 2, 
-      centerY - previewHeight / 2, 
-      previewWidth, 
+      centerX - previewWidth / 2,
+      centerY - previewHeight / 2,
+      previewWidth,
       previewHeight
     );
   }
-  
+
   ctx.setLineDash([]);
 };
 
@@ -284,9 +334,9 @@ const handleMouseDown = (event: MouseEvent) => {
   event.preventDefault();
   const cell = getGridCellFromCoordinates(event.clientX, event.clientY);
   if (!cell) return;
-  
+
   isSelecting.value = true;
-  
+
   if (currentMode.value === 'rectangle') {
     selectionStart.value = cell;
     selectionEnd.value = cell;
@@ -295,31 +345,38 @@ const handleMouseDown = (event: MouseEvent) => {
     toggleGridSelection(cell, operation);
     lastSelectedCell.value = cell;
   }
-  
+
   emitSelectionChange();
   redrawCanvas();
 };
 
 const handleMouseMove = (event: MouseEvent) => {
   const cell = getGridCellFromCoordinates(event.clientX, event.clientY);
-  
-  if (hoveredCell.value?.row !== cell?.row || hoveredCell.value?.col !== cell?.col) {
+
+  if (
+    hoveredCell.value?.row !== cell?.row ||
+    hoveredCell.value?.col !== cell?.col
+  ) {
     hoveredCell.value = cell;
     emit('gridHover', cell);
     redrawCanvas(); // Redraw to update hover preview
   }
 
   if (!isSelecting.value || !cell) return;
-  
+
   if (currentMode.value === 'rectangle') {
     selectionEnd.value = cell;
     redrawCanvas();
   } else {
     const operation = currentMode.value === 'eraser' ? 'deselect' : 'select';
-    if (!lastSelectedCell.value || lastSelectedCell.value.row !== cell.row || lastSelectedCell.value.col !== cell.col) {
+    if (
+      !lastSelectedCell.value ||
+      lastSelectedCell.value.row !== cell.row ||
+      lastSelectedCell.value.col !== cell.col
+    ) {
       toggleGridSelection(cell, operation);
       lastSelectedCell.value = cell;
-      
+
       // Update canvas and emit changes after brush/single cell operation
       emitSelectionChange();
       redrawCanvas();
@@ -330,8 +387,12 @@ const handleMouseMove = (event: MouseEvent) => {
 const handleMouseUp = () => {
   if (!isSelecting.value) return;
   isSelecting.value = false;
-  
-  if (currentMode.value === 'rectangle' && selectionStart.value && selectionEnd.value) {
+
+  if (
+    currentMode.value === 'rectangle' &&
+    selectionStart.value &&
+    selectionEnd.value
+  ) {
     const minRow = Math.min(selectionStart.value.row, selectionEnd.value.row);
     const maxRow = Math.max(selectionStart.value.row, selectionEnd.value.row);
     const minCol = Math.min(selectionStart.value.col, selectionEnd.value.col);
@@ -362,22 +423,41 @@ const handleMouseLeave = () => {
   }
 };
 
-const handleTouchStart = (e: TouchEvent) => handleMouseDown({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY, preventDefault: () => e.preventDefault() } as MouseEvent);
-const handleTouchMove = (e: TouchEvent) => handleMouseMove({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY } as MouseEvent);
+const handleTouchStart = (e: TouchEvent) =>
+  handleMouseDown({
+    clientX: e.touches[0].clientX,
+    clientY: e.touches[0].clientY,
+    preventDefault: () => e.preventDefault(),
+  } as MouseEvent);
+const handleTouchMove = (e: TouchEvent) =>
+  handleMouseMove({
+    clientX: e.touches[0].clientX,
+    clientY: e.touches[0].clientY,
+  } as MouseEvent);
 const handleTouchEnd = () => handleMouseUp();
 
 // --- Main Logic ---
 const getGridCellFromCoordinates = (x: number, y: number): GridCell | null => {
   const rect = canvasRef.value?.getBoundingClientRect();
   if (!rect || !cellSize.value || !gridDimensions.value) return null;
-  
+
   const canvasX = x - rect.left;
   const canvasY = y - rect.top;
-  
-  return screenToGridResolution(canvasX, canvasY, cellSize.value.width, cellSize.value.height, gridDimensions.value.cols, gridDimensions.value.rows);
+
+  return screenToGridResolution(
+    canvasX,
+    canvasY,
+    cellSize.value.width,
+    cellSize.value.height,
+    gridDimensions.value.cols,
+    gridDimensions.value.rows
+  );
 };
 
-const toggleGridSelection = (cell: GridCell, operation: 'select' | 'deselect' | 'toggle' = 'toggle') => {
+const toggleGridSelection = (
+  cell: GridCell,
+  operation: 'select' | 'deselect' | 'toggle' = 'toggle'
+) => {
   if (brushSize.value > 1 && operation !== 'toggle') {
     applyBrush(cell, operation);
   } else {
@@ -385,15 +465,22 @@ const toggleGridSelection = (cell: GridCell, operation: 'select' | 'deselect' | 
   }
 };
 
-const toggleSingleCell = (cell: GridCell, operation: 'select' | 'deselect' | 'toggle') => {
+const toggleSingleCell = (
+  cell: GridCell,
+  operation: 'select' | 'deselect' | 'toggle'
+) => {
   const key = getGridKey(cell.row, cell.col);
   const activeLayer = colorLayers.value.get(activeColorLayer.value);
   if (!activeLayer) return;
 
   const isSelected = activeLayer.selectedGrids.has(key);
   switch (operation) {
-    case 'select': if (!isSelected) activeLayer.selectedGrids.add(key); break;
-    case 'deselect': if (isSelected) activeLayer.selectedGrids.delete(key); break;
+    case 'select':
+      if (!isSelected) activeLayer.selectedGrids.add(key);
+      break;
+    case 'deselect':
+      if (isSelected) activeLayer.selectedGrids.delete(key);
+      break;
     case 'toggle':
       if (isSelected) activeLayer.selectedGrids.delete(key);
       else activeLayer.selectedGrids.add(key);
@@ -411,11 +498,14 @@ const applyBrush = (centerCell: GridCell, operation: 'select' | 'deselect') => {
     for (let c = centerCell.col - size + 1; c < centerCell.col + size; c++) {
       if (r >= 0 && r < rows && c >= 0 && c < cols) {
         if (brushShape.value === 'circle') {
-          const distance = Math.sqrt(Math.pow(r - centerCell.row, 2) + Math.pow(c - centerCell.col, 2));
+          const distance = Math.sqrt(
+            Math.pow(r - centerCell.row, 2) + Math.pow(c - centerCell.col, 2)
+          );
           if (distance < size) {
             toggleSingleCell({ row: r, col: c }, operation);
           }
-        } else { // Square brush
+        } else {
+          // Square brush
           toggleSingleCell({ row: r, col: c }, operation);
         }
       }
@@ -467,6 +557,7 @@ const loadImage = async (imageSource: string | File | Blob) => {
     errorMessage.value = error.message;
   } finally {
     imageLoaded.value = true;
+    redrawCanvas();
   }
 };
 
@@ -492,7 +583,10 @@ const getActiveLayerCount = (): number => {
 };
 
 const getTotalSelectedCount = (): number => {
-  return Array.from(colorLayers.value.values()).reduce((total, layer) => total + (layer.visible ? layer.selectedGrids.size : 0), 0);
+  return Array.from(colorLayers.value.values()).reduce(
+    (total, layer) => total + (layer.visible ? layer.selectedGrids.size : 0),
+    0
+  );
 };
 
 // --- Brush Methods ---
@@ -511,8 +605,12 @@ const exportGridLayers = (): ColorLayerExport => {
     layerData[color] = Array.from(layer.selectedGrids);
   });
   return {
-    imageSize: { width: imageElement.value?.naturalWidth || 0, height: imageElement.value?.naturalHeight || 0 },
-    resolution: props.resolution, layers: layerData
+    imageSize: {
+      width: imageElement.value?.naturalWidth || 0,
+      height: imageElement.value?.naturalHeight || 0,
+    },
+    resolution: props.resolution,
+    layers: layerData,
   };
 };
 
@@ -528,7 +626,7 @@ const exportOptimizedLayers = (): GridLayerExport | null => {
 
   return {
     metadata: { cols, rows },
-    layers: layerData
+    layers: layerData,
   };
 };
 
@@ -540,7 +638,9 @@ const importOptimizedLayers = (data: GridLayerExport) => {
   // For simplicity, we assume the import happens on a grid of the same dimensions.
   // A more advanced version could handle resizing, but that's out of scope for now.
   if (data.metadata.cols !== cols || data.metadata.rows !== rows) {
-    console.warn('Importing data from a different grid resolution. Results may be inaccurate.');
+    console.warn(
+      'Importing data from a different grid resolution. Results may be inaccurate.'
+    );
   }
 
   colorLayers.value.clear();
@@ -561,7 +661,7 @@ const importOptimizedLayers = (data: GridLayerExport) => {
       selectedGrids: newSelectedGrids,
       visible: true,
       name: getColorName(upperColor),
-      opacity: 0.5
+      opacity: 0.5,
     });
   });
 
@@ -571,7 +671,6 @@ const importOptimizedLayers = (data: GridLayerExport) => {
   redrawCanvas();
   emitSelectionChange();
 };
-
 
 const importGridLayers = (data: ColorLayerExport) => {
   if (!data || !data.layers) return;
@@ -583,7 +682,7 @@ const importGridLayers = (data: ColorLayerExport) => {
       selectedGrids: new Set(gridKeys),
       visible: true,
       name: getColorName(upperColor),
-      opacity: 0.5
+      opacity: 0.5,
     });
   });
   if (colorLayers.value.size > 0) {
@@ -593,19 +692,28 @@ const importGridLayers = (data: ColorLayerExport) => {
   emitSelectionChange();
 };
 
-
 const emitSelectionChange = () => {
   const layerData: LayerSelectionData = {
     activeColor: activeColorLayer.value,
-    layers: Array.from(colorLayers.value.values()).map(l => ({ color: l.color, selectedCount: l.selectedGrids.size, visible: l.visible, name: l.name })),
-    totalSelected: getTotalSelectedCount()
+    layers: Array.from(colorLayers.value.values()).map((l) => ({
+      color: l.color,
+      selectedCount: l.selectedGrids.size,
+      visible: l.visible,
+      name: l.name,
+    })),
+    totalSelected: getTotalSelectedCount(),
   };
   emit('layerChange', layerData);
 
   const allSelectedCells: GridCell[] = [];
-  colorLayers.value.forEach(layer => {
+  colorLayers.value.forEach((layer) => {
     if (layer.visible) {
-      layer.selectedGrids.forEach(key => allSelectedCells.push({ row: parseInt(key.split(',')[0]), col: parseInt(key.split(',')[1]) }));
+      layer.selectedGrids.forEach((key) =>
+        allSelectedCells.push({
+          row: parseInt(key.split(',')[0]),
+          col: parseInt(key.split(',')[1]),
+        })
+      );
     }
   });
 
@@ -619,26 +727,44 @@ const emitSelectionChange = () => {
     imageHeight: imageElement.value?.naturalHeight || 0,
     canvasWidth: canvasWidth.value,
     canvasHeight: canvasHeight.value,
-    layerData: layerData
+    layerData: layerData,
   };
   emit('selectionChange', selectionData);
 };
 
 // --- Watchers & Lifecycle ---
-watch(() => props.image, (newImage: any) => { if (newImage) loadImage(newImage); }, { immediate: true });
-watch(() => props.selectionMode, (newMode: any) => { if (newMode) switchMode(newMode); });
-watch(() => props.resolution, () => {
-  initColorLayers();
-  updateGridCalculations();
-  emitSelectionChange();
-  redrawCanvas();
-});
-watch(() => props.layerColors, () => {
-  initColorLayers();
-  redrawCanvas();
-}, { deep: true });
+watch(
+  () => props.image,
+  (newImage: any) => {
+    if (newImage) loadImage(newImage);
+  },
+  { immediate: true }
+);
+watch(
+  () => props.selectionMode,
+  (newMode: any) => {
+    if (newMode) switchMode(newMode);
+  }
+);
+watch(
+  () => props.resolution,
+  () => {
+    initColorLayers();
+    updateGridCalculations();
+    emitSelectionChange();
+    redrawCanvas();
+  }
+);
+watch(
+  () => props.layerColors,
+  () => {
+    initColorLayers();
+    redrawCanvas();
+  },
+  { deep: true }
+);
 
-defineExpose({ 
+defineExpose({
   // Template accessible variables
   canvasWidth,
   canvasHeight,
@@ -652,8 +778,8 @@ defineExpose({
   handleTouchMove,
   handleTouchEnd,
   // Data export/import methods
-  exportGridLayers, 
-  importGridLayers, 
+  exportGridLayers,
+  importGridLayers,
   exportOptimizedLayers,
   importOptimizedLayers,
   // External control methods
@@ -669,16 +795,16 @@ defineExpose({
   setBrushShape,
   getTotalSelectedCount,
   getActiveLayerCount,
-  getColorName
+  getColorName,
 });
 
 onMounted(() => {
   initColorLayers();
-  
+
   // Initialize brush settings from props
   brushSize.value = props.defaultBrushSize;
   brushShape.value = props.defaultBrushShape;
-  
+
   if (canvasRef.value) {
     redrawCanvas();
   }
@@ -689,9 +815,6 @@ onUnmounted(() => {
     URL.revokeObjectURL((imageElement.value as any)._objectUrl);
   }
 });
-
-
-
 </script>
 <style scoped>
 .object-detection-marker {
@@ -727,8 +850,10 @@ onUnmounted(() => {
   color: white;
 }
 
-.loading-indicator { background: rgba(0, 123, 255, 0.9); }
-.error-message { background: rgba(220, 53, 69, 0.9); }
-
-
-</style> 
+.loading-indicator {
+  background: rgba(0, 123, 255, 0.9);
+}
+.error-message {
+  background: rgba(220, 53, 69, 0.9);
+}
+</style>
