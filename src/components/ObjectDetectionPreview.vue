@@ -5,18 +5,18 @@
       <div class="skeleton-shimmer"></div>
       <div class="skeleton-text">미리보기 로딩 중...</div>
     </div>
-    
+
     <!-- Canvas -->
-    <canvas 
-      ref="previewCanvasRef" 
+    <canvas
+      ref="previewCanvasRef"
       class="preview-canvas"
-      :class="{ 
+      :class="{
         'canvas-loaded': imageLoaded,
         'fit-contain': currentObjectFitMode === 'contain',
-        'fit-cover': currentObjectFitMode === 'cover'
+        'fit-cover': currentObjectFitMode === 'cover',
       }"
     />
-    
+
     <!-- Error Message -->
     <div v-if="errorMessage" class="error-message">
       {{ errorMessage }}
@@ -25,7 +25,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, computed, defineProps, defineExpose } from 'vue';
+import {
+  ref,
+  watch,
+  onMounted,
+  computed,
+  defineProps,
+  defineExpose,
+} from 'vue';
 import type { ImageSource, GridLayerExport } from '../types';
 
 // --- Props ---
@@ -50,26 +57,28 @@ const currentObjectFitMode = computed(() => props.objectFitMode || 'contain');
 const currentRenderMode = computed(() => props.renderMode || 'grid');
 
 // --- Helper Functions ---
-const getBoundingRect = (rects: Array<{ x: number; y: number; width: number; height: number }>) => {
+const getBoundingRect = (
+  rects: Array<{ x: number; y: number; width: number; height: number }>
+) => {
   if (rects.length === 0) return null;
-  
+
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
   let maxY = -Infinity;
-  
+
   rects.forEach((rect: any) => {
     minX = Math.min(minX, rect.x);
     minY = Math.min(minY, rect.y);
     maxX = Math.max(maxX, rect.x + rect.width);
     maxY = Math.max(maxY, rect.y + rect.height);
   });
-  
+
   return {
     x: minX,
     y: minY,
     width: maxX - minX,
-    height: maxY - minY
+    height: maxY - minY,
   };
 };
 
@@ -90,18 +99,18 @@ const drawPreview = async () => {
   try {
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    
+
     await new Promise<void>((resolve, reject) => {
       img.onload = () => {
         if (!canvas) return;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
+
         // Calculate image dimensions based on object-fit mode
         const imgRatio = img.width / img.height;
         const canvasRatio = canvas.width / canvas.height;
-        
+
         let drawWidth, drawHeight, drawX, drawY;
-        
+
         if (currentObjectFitMode.value === 'contain') {
           // Contain: fit entire image within canvas, maintain aspect ratio
           if (imgRatio > canvasRatio) {
@@ -133,7 +142,7 @@ const drawPreview = async () => {
             drawY = (canvas.height - drawHeight) / 2;
           }
         }
-        
+
         ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
 
         // Draw selection layers
@@ -141,50 +150,54 @@ const drawPreview = async () => {
           const { cols, rows } = props.selectionData.metadata;
           if (cols === 0 || rows === 0) return;
 
-          Object.entries(props.selectionData.layers).forEach(([color, rects]) => {
-            if (rects.length === 0) return;
-            
-            const layerStyle = props.layerColors?.[color] || { color, opacity: 0.5 };
-            
-            if (currentRenderMode.value === 'rect') {
-              // Rect mode: draw bounding rectangle for each color
-              const boundingRect = getBoundingRect(rects);
-              if (!boundingRect) return;
-              
-              const x = (boundingRect.x / cols) * canvas.width;
-              const y = (boundingRect.y / rows) * canvas.height;
-              const width = (boundingRect.width / cols) * canvas.width;
-              const height = (boundingRect.height / rows) * canvas.height;
-              
-              ctx.fillStyle = hexToRgba(layerStyle.color, layerStyle.opacity);
-              ctx.fillRect(x, y, width, height);
-            } else {
-              // Grid mode: draw individual rectangles (original behavior)
-              const path = new Path2D();
-              rects.forEach((rect: any) => {
-                const x = (rect.x / cols) * canvas.width;
-                const y = (rect.y / rows) * canvas.height;
-                const width = (rect.width / cols) * canvas.width;
-                const height = (rect.height / rows) * canvas.height;
-                path.rect(x, y, width, height);
-              });
-              
-              ctx.fillStyle = hexToRgba(layerStyle.color, layerStyle.opacity);
-              ctx.fill(path);
+          Object.entries(props.selectionData.layers).forEach(
+            ([color, rects]) => {
+              if (rects.length === 0) return;
+
+              const layerStyle = props.layerColors?.[color] || {
+                color,
+                opacity: 0.5,
+              };
+
+              if (currentRenderMode.value === 'rect') {
+                // Rect mode: draw bounding rectangle for each color
+                const boundingRect = getBoundingRect(rects);
+                if (!boundingRect) return;
+
+                const x = (boundingRect.x / cols) * canvas.width;
+                const y = (boundingRect.y / rows) * canvas.height;
+                const width = (boundingRect.width / cols) * canvas.width;
+                const height = (boundingRect.height / rows) * canvas.height;
+
+                ctx.fillStyle = hexToRgba(layerStyle.color, layerStyle.opacity);
+                ctx.fillRect(x, y, width, height);
+              } else {
+                // Grid mode: draw individual rectangles (original behavior)
+                const path = new Path2D();
+                rects.forEach((rect: any) => {
+                  const x = (rect.x / cols) * canvas.width;
+                  const y = (rect.y / rows) * canvas.height;
+                  const width = (rect.width / cols) * canvas.width;
+                  const height = (rect.height / rows) * canvas.height;
+                  path.rect(x, y, width, height);
+                });
+
+                ctx.fillStyle = hexToRgba(layerStyle.color, layerStyle.opacity);
+                ctx.fill(path);
+              }
             }
-          });
+          );
         }
         resolve();
       };
       img.onerror = () => reject(new Error('이미지를 불러올 수 없습니다.'));
-      
+
       if (typeof props.image === 'string') {
         img.src = props.image;
       } else {
         img.src = URL.createObjectURL(props.image);
       }
     });
-
   } catch (error: any) {
     errorMessage.value = error.message;
   } finally {
@@ -212,9 +225,8 @@ defineExpose({
   imageLoaded,
   errorMessage,
   currentObjectFitMode,
-  currentRenderMode
+  currentRenderMode,
 });
-
 </script>
 
 <style scoped>
@@ -305,4 +317,4 @@ defineExpose({
   text-align: center;
   backdrop-filter: blur(4px);
 }
-</style> 
+</style>
